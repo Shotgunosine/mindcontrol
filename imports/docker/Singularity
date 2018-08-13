@@ -24,6 +24,9 @@ From: mindcontrol:latest
     MC_PORT=$(cat /mc_settings/mc_port)
     MONGO_PORT=$(expr ${MC_PORT} + 1)
 
+    # echo pgid into outputfile
+    ps -u $(whoami) -o pgid,cmd --forest | grep $$ | grep -v grep | awk '{print $1}' >> /output/pgid
+
     # Check if we need to reset meteor
     DB_OWNER="NONE"
     if [ -d /home/singularity_home/mindcontrol/.meteor/local/db ] ; then
