@@ -898,7 +898,7 @@ if __name__ == "__main__":
                + f" -H {mc_hdir.absolute().as_posix() + '_'}${{USER}}:/home/${{USER}} {simg_path.absolute()}" \
                + f" {container_name}"
     write_startfile(startfile, basedir, startcmd)
-    write_stopfile(stopfile, basedir, mc_gnam, stop_cmd, meteor_port, container_name, allow_pidns)
+    write_stopfile(stopfile, basedir, mc_gnam, stop_cmd, meteor_port, container_name, allow_pidns, output_dir=simg_out, mc_hdir=mc_hdir)
     cmd = f"/bin/bash {startfile.absolute()}"
     if not args.no_server:
         readme_str += "## Sinularity image was built with this comand  \n"
