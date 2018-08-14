@@ -881,7 +881,7 @@ if __name__ == "__main__":
     else:
         stop_cmd = f"singularity instance.stop {container_name}"
 
-    build_command = f"singularity pull --name {simg_path.parts[-1].split('.')[0]} shub://Shotgunosine/mindcontrol"
+    build_command = f"singularity pull --name {simg_path.parts[-1]} shub://Shotgunosine/mindcontrol"
     if bids_dir is None:
         bids_dir = freesurfer_dir
     elif freesurfer_dir is None:
