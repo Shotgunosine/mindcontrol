@@ -396,29 +396,43 @@ fi
     startfile.write_text(script)
 
 
-def write_stopfile(stopfile, workdir, group, cmd, meteor_port, container_name, run_stop=True):
+def write_stopfile(stopfile, workdir, group, cmd, meteor_port, container_name, run_stop=True, output_dir=None,mc_hdir=None ):
     #find scratch/singularity_home ! -group {group} -exec chmod 770 {{}} \; -exec chown :{group} {{}} \;
-
-    if run_stop:
-        script = f"""#! /bin/bash
+    script = f"""#! /bin/bash
 cd {workdir.absolute()}
 if [ -d log/simg_out/mindcontrol_database ] ; then
     DATE=$(date +"%Y%m%d%H%M%S")
     echo "Saving previous database dump to log/simg_out/mindcontrol_database_${{DATE}}.tar.gz"
     tar -czf log/simg_out/mindcontrol_database_${{DATE}}.tar.gz log/simg_out/mindcontrol_database/
-fi
-singularity exec instance://{container_name} mongodump --out=/output/mindcontrol_database --port={meteor_port+1} --gzip
-singularity exec instance://{container_name} mongod --dbpath=/home/${{USER}}/mindcontrol/.meteor/local/db --shutdown
-{cmd}
-echo "Waiting 30 seconds for everything to finish writing"
-sleep 30
-chown -R :{group} scratch/singularity_home/mindcontrol/.meteor/local
-chmod -R 770 scratch/singularity_home/mindcontrol/.meteor/local
-chmod -R 770 log
-chmod -R 770 scratch/nginx
-"""
+fi"""
+    if run_stop:
+        script += f"""singularity exec instance://{container_name} mongodump --out=/output/mindcontrol_database --port={meteor_port+1} --gzip
+        singularity exec instance://{container_name} mongod --dbpath=/home/${{USER}}/mindcontrol/.meteor/local/db --shutdown
+        {cmd}
+        echo "Waiting 30 seconds for everything to finish writing"
+        sleep 30
+        chown -R :{group} scratch/singularity_home/mindcontrol/.meteor/local
+        chmod -R 770 scratch/singularity_home/mindcontrol/.meteor/local
+        chmod -R 770 log
+        chmod -R 770 scratch/nginx
+        """
     else:
-        raise NotImplementedError
+        if output_dir is None or mc_hdir is None:
+            raise ValueError("If you aren't on a machine where singularity service works, you must provide an output_dir and mc_hdir")
+        script += f"""
+        PGID=$(grep 'DAEMON_PID' ~/.singularity/daemon/*/{container_name} | sed 's/^DAEMON_PID=\(.*\)$/\\1/')
+        singularity exec  -B {output_dir.absolute()}:/output \
+        mc_service.simg mongodump --out=/output/mindcontrol_database --port={meteor_port+1} --gzip
+        singularity exec -H {mc_hdir.absolute().as_posix() + '_'}${{USER}}:/home/${{USER}}) \
+        mc_service.simg mongod --dbpath=/home/${{USER}}/mindcontrol/.meteor/local/db --shutdown
+        pkill -9 -g ${{PGID}}
+        echo "Waiting 30 seconds for everything to finish writing"
+        sleep 30
+        chown -R :{group} scratch/singularity_home/mindcontrol/.meteor/local
+        chmod -R 770 scratch/singularity_home/mindcontrol/.meteor/local
+        chmod -R 770 log
+        chmod -R 770 scratch/nginx
+        """
     stopfile.write_text(script)
 
 #this function finds data in the subjects_dir
