@@ -424,9 +424,9 @@ fi"""
         NGINX_PID=$(cat {nginx_scratch.absolute()}/nginx.pid)
         singularity exec  -B {output_dir.absolute()}:/output \
         mc_service.simg mongodump --out=/output/mindcontrol_database --port={meteor_port+1} --gzip
-        singularity exec -H {mc_hdir.absolute().as_posix() + '_'}${{USER}}:/home/${{USER}}) \
+        singularity exec -H {mc_hdir.absolute().as_posix() + '_'}${{USER}}:/home/${{USER}} \
         mc_service.simg mongod --dbpath=/home/${{USER}}/mindcontrol/.meteor/local/db --shutdown
-        pkill -QUIT -g ${{PGID}}
+        pkill -QUIT -g ${{METEOR_PGID}}
         kill -QUIT ${{NGINX_PID}}
         echo "Waiting 30 seconds for everything to finish writing"
         sleep 30
