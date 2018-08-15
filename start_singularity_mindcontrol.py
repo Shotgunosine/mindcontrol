@@ -396,7 +396,7 @@ fi
     startfile.write_text(script)
 
 
-def write_stopfile(stopfile, workdir, group, cmd, meteor_port, container_name, run_stop=True, output_dir=None,mc_hdir=None ):
+def write_stopfile(stopfile, workdir, group, cmd, meteor_port, container_name, run_stop=True, output_dir=None, mc_hdir=None, nginx_scratch=None):
     #find scratch/singularity_home ! -group {group} -exec chmod 770 {{}} \; -exec chown :{group} {{}} \;
     script = f"""#! /bin/bash
 cd {workdir.absolute()}
@@ -417,15 +417,17 @@ fi"""
         chmod -R 770 scratch/nginx
         """
     else:
-        if output_dir is None or mc_hdir is None:
-            raise ValueError("If you aren't on a machine where singularity service works, you must provide an output_dir and mc_hdir")
+        if output_dir is None or mc_hdir is None or nginx_scratch is None:
+            raise ValueError("If you aren't on a machine where singularity service works, you must provide an output_dir, mc_hdir, and nginx_scratch")
         script += f"""
-        PGID=$(grep 'DAEMON_PID' ~/.singularity/daemon/*/{container_name} | sed 's/^DAEMON_PID=\(.*\)$/\\1/')
+        METEOR_PGID=$(grep 'DAEMON_PID' ~/.singularity/daemon/*/{container_name} | sed 's/^DAEMON_PID=\(.*\)$/\\1/')
+        NGINX_PID=$(cat {nginx_scratch.absolute()}/nginx.pid)
         singularity exec  -B {output_dir.absolute()}:/output \
         mc_service.simg mongodump --out=/output/mindcontrol_database --port={meteor_port+1} --gzip
         singularity exec -H {mc_hdir.absolute().as_posix() + '_'}${{USER}}:/home/${{USER}}) \
         mc_service.simg mongod --dbpath=/home/${{USER}}/mindcontrol/.meteor/local/db --shutdown
-        pkill -9 -g ${{PGID}}
+        pkill -QUIT -g ${{PGID}}
+        kill -QUIT ${{NGINX_PID}}
         echo "Waiting 30 seconds for everything to finish writing"
         sleep 30
         chown -R :{group} scratch/singularity_home/mindcontrol/.meteor/local
@@ -898,7 +900,9 @@ if __name__ == "__main__":
                + f" -H {mc_hdir.absolute().as_posix() + '_'}${{USER}}:/home/${{USER}} {simg_path.absolute()}" \
                + f" {container_name}"
     write_startfile(startfile, basedir, startcmd)
-    write_stopfile(stopfile, basedir, mc_gnam, stop_cmd, meteor_port, container_name, allow_pidns, output_dir=simg_out, mc_hdir=mc_hdir)
+    write_stopfile(stopfile, basedir, mc_gnam, stop_cmd, meteor_port, 
+                   container_name, allow_pidns, 
+                   output_dir=simg_out, mc_hdir=mc_hdir, nginx_scratch=nginx_scratch)
     cmd = f"/bin/bash {startfile.absolute()}"
     if not args.no_server:
         readme_str += "## Sinularity image was built with this comand  \n"
