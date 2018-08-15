@@ -909,7 +909,13 @@ if __name__ == "__main__":
         print(build_command, flush=True)
         subprocess.run(build_command, cwd=basedir, shell=True, check=True)
         print(cmd, flush=True)
-        subprocess.run(cmd, cwd=basedir, shell=True, check=True)
+        if not allow_pidns:
+            try:
+                subprocess.run(cmd, cwd=basedir, shell=True, check=True)
+            except subprocess.CalledProcessError:
+                pass
+        else:
+            subprocess.run(cmd, cwd=basedir, shell=True, check=True)
     else:
         readme_str += "## To build the singularity image  \n"
         print("Not starting server, but here's the command you would use if you wanted to:")
