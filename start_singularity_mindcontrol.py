@@ -420,7 +420,7 @@ fi"""
         if output_dir is None or mc_hdir is None or nginx_scratch is None:
             raise ValueError("If you aren't on a machine where singularity service works, you must provide an output_dir, mc_hdir, and nginx_scratch")
         script += f"""
-        METEOR_PGID=$(grep 'DAEMON_PID' ~/.singularity/daemon/*/{container_name} | sed 's/^DAEMON_PID=\(.*\)$/\\1/')
+        METEOR_PGID=$(grep 'DAEMON_PID' ~/.singularity/daemon/$(hostname)/{container_name} | sed 's/^DAEMON_PID=\(.*\)$/\\1/')
         NGINX_PID=$(cat {nginx_scratch.absolute()}/nginx.pid)
         singularity exec  -B {output_dir.absolute()}:/output \
         mc_service.simg mongodump --out=/output/mindcontrol_database --port={meteor_port+1} --gzip
